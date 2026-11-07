@@ -25,8 +25,20 @@ export async function blackcat(path,method='GET',body){
   const safeText=v=>typeof v==='string'?v.slice(0,180):null;
   const requestId=response.headers.get('x-request-id')||response.headers.get('x-correlation-id')||null;
   const upstream={httpStatus:response.status,contentType:response.headers.get('content-type'),code:safeText(data.code||data.errorCode),message:safeText(data.message),error:safeText(data.error),hasData:!!data.data,rawIsJson:!!raw&&Object.keys(data).length>0};
+  // Redact common personal identifiers and secrets before writing provider diagnostics.
+  const sanitizeProviderMessage = value => {
+   if(typeof value !== 'string') return null;
+   let msg=value.slice(0,400);
+   msg=msg.replace(/\b[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}\b/g,'[EMAIL]');
+   msg=msg.replace(/\b(?:sk_live_|pk_live_|Bearer\s+)[A-Za-z0-9._-]+/gi,'[CREDENTIAL]');
+   msg=msg.replace(/\b\d[\d.()\s-]{8,}\d\b/g,'[NUMBER]');
+   msg=msg.replace(/https?:\/\/\S+/gi,'[URL]');
+   return msg;
+  };
+  const safeMessage=sanitizeProviderMessage(upstream.message);
+  const safeError=sanitizeProviderMessage(upstream.error);
   // Upstream messages may include customer data. Log only generic error categories, not their text.
-  console.error('BlackCat upstream diagnostic',JSON.stringify({httpStatus:upstream.httpStatus,code:upstream.code,contentType:upstream.contentType,hasData:upstream.hasData,rawIsJson:upstream.rawIsJson,hasMessage:!!upstream.message,hasError:!!upstream.error,requestId,path,payloadShape:body?{amountCents:body.amount,method:body.paymentMethod,itemCount:body.items?.length,hasName:!!body.customer?.name,hasEmail:!!body.customer?.email,hasPhone:!!body.customer?.phone,hasDocument:!!body.customer?.document?.number,hasShipping:!!body.shipping}:null}));
+  console.error('BlackCat upstream diagnostic',JSON.stringify({httpStatus:upstream.httpStatus,code:upstream.code,contentType:upstream.contentType,hasData:upstream.hasData,rawIsJson:upstream.rawIsJson,hasMessage:!!upstream.message,hasError:!!upstream.error,providerMessage:safeMessage,providerError:safeError,requestId,path,payloadShape:body?{amountCents:body.amount,method:body.paymentMethod,itemCount:body.items?.length,hasName:!!body.customer?.name,hasEmail:!!body.customer?.email,hasPhone:!!body.customer?.phone,hasDocument:!!body.customer?.document?.number,hasShipping:!!body.shipping}:null}));
   const e=new Error('BlackCat HTTP '+response.status);e.status=response.status;e.code=upstream.code;e.requestId=requestId;e.upstream={httpStatus:response.status,hasMessage:!!upstream.message,hasError:!!upstream.error};
   e.publicMessage=response.status>=500?'A BlackCat apresentou uma falha interna. Tente novamente ou contate o suporte.':'Pagamento recusado pela BlackCat. Confira os dados.';
   throw e;
