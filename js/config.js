@@ -3,10 +3,10 @@ const CONFIG = {
     // URLs das APIs (agora são arquivos .js na pasta /api/)
     API_BASE_URL: '', // Deixe vazio para usar caminhos relativos
     ENDPOINTS: {
-        pagou: '/api/pagou-pix',
+        pix: '/api/bluepag-pix',
         checkPayment: '/api/check-payment',
-        checkConfirmed: '/api/check-confirmed',
-        webhook: '/api/webhook'
+        checkConfirmed: '/api/check-payment',
+        provider: 'bluepag'
     },
     
     // Configurações do site
