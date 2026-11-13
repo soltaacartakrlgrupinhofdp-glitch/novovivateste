@@ -11,7 +11,7 @@ export function errorResponse(res,e){
  return res.status(status).json({success:false,error:e.publicMessage||'Não foi possível gerar o PIX. Tente novamente.',reference:e.requestId||null});
 }
 export async function blackcat(path,method='GET',body){
- const key=String(process.env.BLACKCAT_API_KEY || 'sk_live_134156a3bf856441411b58926e19ddd8eb6f8372d6d00b17970a1264892ab305').trim();
+ const key=String(process.env.BLACKCAT_API_KEY).trim();
  if(!key){const e=new Error('BLACKCAT_API_KEY não configurada.');e.status=503;throw e;}
  let response;
  try{
